@@ -1,0 +1,50 @@
+## 发生死锁时，修改当前在路上的所有车辆的路径
+## 修改方法：从车辆上一次备份所在的道路开始，先随机走一步，然后根据最短路走出后续步数
+vector<int> roads;
+int cur, next, lc_size;
+int rid = -1, i = 0, rd1 = 1;
+for(auto iter = onRoadCar.begin(); iter != onRoadCar.end(); iter++)
+{
+    Car & car = carMap[*iter];
+    lc_size = car.answer.size();
+    if(car.orderB == lc_size-1)
+        continue;
+    if(car.orderB == -1){
+        cur = car.from;
+        rid = -1;
+    }
+    else{
+        cur = graph.network1[CrossPair(car.answer[car.orderB],car.answer[car.orderB+1])];
+        rid = car.answer[car.orderB];
+    }
+    for(int j = car.orderB+1; j < lc_size; j++)
+        car.answer.pop_back();
+    while(rd1>0){
+        i++;
+        Cross & cross = crossMap[cur]; // 奇怪哦，为什么这样用就需要Cross()，因为用户自定义了构造函数，那么编译器就不会提供默认构造函数，而crossMap[cur]需要一个默认构造函数，所以需要手动添加一个默认构造函数
+        roads = GetRoadStartFrom(cross, rid, -1); // 前提是条条大路通罗马，如果这个前提不满足那么随机走几步就可能因为不能回头走而出不来
+        if(roads.size()==0){
+            cout << cross.id << ' ' << rid << "Why ????" << endl;
+            getchar();
+            break;
+        }
+        //srand((int)time(0));
+        int t = rand()%roads.size();
+        rid = roads[t];
+        car.answer.push_back(rid);
+        cur = (cur == roadMap[rid].from) ? roadMap[rid].to : roadMap[rid].from;
+
+        if(i >= rd1){
+            next = graph.nextCrossForBest[car.speed][graph.crossOrder[cur]][graph.crossOrder[car.to]];
+            if(cur == car.to || (next != -1 && graph.network[CrossPair(cur,next)] != rid)){ // 随机出发几步之后不能到达终点，延迟
+                break;
+            }
+        }
+    }
+    while(cur != car.to)
+    {
+        next = graph.nextCrossForBest[car.speed][graph.crossOrder[cur]][graph.crossOrder[car.to]];
+        car.answer.push_back(graph.network[CrossPair(cur, next)]);
+        cur = next;
+    }
+}
